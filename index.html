@@ -3,215 +3,119 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>AR Motor Digital Twin Pro</title>
+  <title>AR Penalty Kick Simulator Pro</title>
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
   
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 
-    /* 1. Live Telemetry HUD */
-    .iot-hud {
-      position: fixed; top: 12px; left: 12px;
-      background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(56, 189, 248, 0.4);
-      border-radius: 12px; padding: 8px 12px; color: #fff; z-index: 999;
-      backdrop-filter: blur(10px); font-size: 11px;
+    /* 1. Scoreboard HUD */
+    .score-hud {
+      position: fixed;
+      top: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.5);
+      border-radius: 20px;
+      padding: 8px 20px;
+      color: #fff;
+      z-index: 999;
+      display: flex;
+      gap: 15px;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
     }
-    .hud-title { color: #38bdf8; font-weight: 700; font-size: 10px; letter-spacing: 0.5px; margin-bottom: 4px; }
-    .hud-val { font-weight: 600; color: #38bdf8; }
+    .score-box { text-align: center; }
+    .score-title { font-size: 10px; color: #94a3b8; font-weight: bold; }
+    .score-val { font-size: 18px; font-weight: 800; color: #38bdf8; }
 
-    /* 2. PM Check Toggle Button */
-    .pm-toggle-btn {
-      position: fixed; top: 12px; right: 12px;
-      background: #0284c7; color: #fff; border: none; padding: 8px 14px;
-      border-radius: 20px; font-weight: 600; font-size: 12px; z-index: 999; cursor: pointer;
-      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4);
+    /* 2. Notification Banner (Goal / Saved) */
+    .status-banner {
+      position: fixed;
+      top: 75px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 8px 20px;
+      border-radius: 30px;
+      font-weight: 800;
+      font-size: 16px;
+      color: white;
+      z-index: 1000;
+      display: none;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
+    .bg-goal { background: #22c55e; }
+    .bg-saved { background: #ef4444; }
 
-    /* 3. Inspection Panel */
-    .inspection-panel {
-      position: fixed; top: 52px; right: 12px;
-      background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(56, 189, 248, 0.3);
-      border-radius: 14px; padding: 12px; color: #fff; z-index: 998; width: 220px;
-      backdrop-filter: blur(12px); box-shadow: 0 10px 25px rgba(0,0,0,0.5); display: none;
+    /* 3. Kick Button */
+    .kick-btn-container {
+      position: fixed;
+      bottom: 25px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 999;
     }
-    .check-item { display: flex; justify-content: space-between; align-items: center; margin: 6px 0; font-size: 11px; }
-    .check-label { cursor: pointer; font-size: 10px; margin-left: 4px; }
-    .save-btn {
-      background: #22c55e; color: #fff; border: none; padding: 8px; border-radius: 8px;
-      width: 100%; font-weight: 700; cursor: pointer; margin-top: 8px; font-size: 11px;
+    .kick-btn {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+      border: 3px solid #ffffff;
+      padding: 14px 45px;
+      border-radius: 40px;
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(239, 68, 68, 0.5);
+      transition: all 0.1s ease;
     }
-
-    /* 4. Controls Panel */
-    .ar-controls-panel {
-      position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
-      display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 92%; max-width: 380px; z-index: 999;
-    }
-    .ar-btn {
-      background: rgba(15, 23, 42, 0.9); color: #f8fafc; border: 1px solid rgba(255, 255, 255, 0.15);
-      padding: 10px 8px; border-radius: 10px; font-weight: 600; font-size: 11px; cursor: pointer; text-align: center;
-    }
-    .btn-orange { border-color: rgba(245, 158, 11, 0.6); color: #fbbf24; }
-    .btn-cyan { border-color: rgba(6, 182, 212, 0.6); color: #22d3ee; }
-    .btn-blue { border-color: rgba(59, 130, 246, 0.6); color: #60a5fa; }
-    .btn-green { border-color: rgba(34, 197, 94, 0.6); color: #4ade80; }
-
-    /* Modals */
-    .modal {
-      display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      background: rgba(15, 23, 42, 0.95); color: #f8fafc; padding: 20px; border-radius: 16px;
-      z-index: 1000; width: 85%; max-width: 320px; border: 1px solid #38bdf8; backdrop-filter: blur(10px);
-    }
-    .modal h3 { margin: 0 0 10px 0; color: #38bdf8; font-size: 15px; border-bottom: 1px solid #334155; padding-bottom: 6px; }
-    .info-row { display: flex; justify-content: space-between; margin: 6px 0; font-size: 12px; }
-    .close-btn { background: #ef4444; border: none; color: white; padding: 8px; margin-top: 12px; border-radius: 8px; width: 100%; font-weight: bold; }
+    .kick-btn:active { transform: scale(0.92); }
+    .kick-btn:disabled { background: #64748b; border-color: #94a3b8; box-shadow: none; }
   </style>
 </head>
 <body style="margin: 0; overflow: hidden;">
 
-  <!-- Live Telemetry HUD -->
-  <div class="iot-hud">
-    <div class="hud-title">📡 LIVE TELEMETRY</div>
-    <div>Temp: <span class="hud-val" id="live-temp">42.5 °C</span> | Vib: <span class="hud-val" id="live-vib">1.20 mm/s</span></div>
-  </div>
-
-  <button class="pm-toggle-btn" onclick="togglePMPanel()">📋 ตรวจเช็ค (PM)</button>
-
-  <!-- Inspection Panel -->
-  <div class="inspection-panel" id="pm-panel">
-    <div style="font-weight:bold; color:#38bdf8; font-size:12px; margin-bottom:8px;">บันทึกผลการตรวจเช็ค</div>
-    <div class="check-item">
-      <span>1. สภาพภายนอก</span>
-      <div>
-        <label class="check-label" style="color:#4ade80"><input type="radio" name="c1" value="ปกติ" checked>ปกติ</label>
-        <label class="check-label" style="color:#f87171"><input type="radio" name="c1" value="ผิดปกติ">ผิด</label>
-      </div>
+  <div class="score-hud">
+    <div class="score-box">
+      <div class="score-title">GOALS</div>
+      <div class="score-val" id="goals-count" style="color: #4ade80;">0</div>
     </div>
-    <div class="check-item">
-      <span>2. เสียงการทำงาน</span>
-      <div>
-        <label class="check-label" style="color:#4ade80"><input type="radio" name="c2" value="ปกติ" checked>ปกติ</label>
-        <label class="check-label" style="color:#f87171"><input type="radio" name="c2" value="ผิดปกติ">ผิด</label>
-      </div>
+    <div style="border-left: 1px solid #334155;"></div>
+    <div class="score-box">
+      <div class="score-title">SAVED</div>
+      <div class="score-val" id="saved-count" style="color: #f87171;">0</div>
     </div>
-    <div class="check-item">
-      <span>3. ระดับความร้อน</span>
-      <div>
-        <label class="check-label" style="color:#4ade80"><input type="radio" name="c3" value="ปกติ" checked>ปกติ</label>
-        <label class="check-label" style="color:#f87171"><input type="radio" name="c3" value="ผิดปกติ">ผิด</label>
-      </div>
-    </div>
-    <div class="check-item">
-      <span>4. การสั่นสะเทือน</span>
-      <div>
-        <label class="check-label" style="color:#4ade80"><input type="radio" name="c4" value="ปกติ" checked>ปกติ</label>
-        <label class="check-label" style="color:#f87171"><input type="radio" name="c4" value="ผิดปกติ">ผิด</label>
-      </div>
-    </div>
-    <button class="save-btn" onclick="saveInspection()">💾 บันทึกผลตรวจ</button>
   </div>
 
-  <!-- Bottom Controls -->
-  <div class="ar-controls-panel">
-    <button class="ar-btn btn-orange" onclick="openModal('modal-nameplate')">🏷️ NAMEPLATE</button>
-    <button class="ar-btn btn-cyan" onclick="openModal('modal-last-date')">📅 LAST DATE</button>
-    <button class="ar-btn btn-blue" onclick="openModal('modal-datasheet')">⚙️ DATASHEET</button>
-    <button class="ar-btn btn-green" onclick="openModal('modal-overhaul')">🛠️ HISTORY</button>
+  <div class="status-banner" id="status-banner">GOAL!</div>
+
+  <div class="kick-btn-container">
+    <button class="kick-btn" id="kick-btn" onclick="startPenaltyKick()">KICK!</button>
   </div>
 
-  <!-- Modals -->
-  <div id="modal-nameplate" class="modal">
-    <h3>🏷️ Motor Nameplate Spec</h3>
-    <div class="info-row"><span style="color:#94a3b8">Brand:</span><b>SIEMENS / ABB</b></div>
-    <div class="info-row"><span style="color:#94a3b8">Serial No.:</span><b>SN-2026-8849A</b></div>
-    <div class="info-row"><span style="color:#94a3b8">Current (A):</span><b>40.5A (Δ 400V)</b></div>
-    <button class="close-btn" onclick="closeModal('modal-nameplate')">ปิด</button>
-  </div>
-
-  <div id="modal-last-date" class="modal">
-    <h3>📅 Last Overhaul Record</h3>
-    <div class="info-row"><span style="color:#94a3b8">Date:</span><b style="color:#f59e0b">14 FEB 2026</b></div>
-    <div class="info-row"><span style="color:#94a3b8">Service:</span><b>Bearing & Alignment</b></div>
-    <button class="close-btn" onclick="closeModal('modal-last-date')">ปิด</button>
-  </div>
-
-  <div id="modal-datasheet" class="modal">
-    <h3>⚙️ Motor Datasheet</h3>
-    <div class="info-row"><span style="color:#94a3b8">Model:</span><b>IE3 High Efficiency</b></div>
-    <div class="info-row"><span style="color:#94a3b8">Power:</span><b>22 kW / 30 HP</b></div>
-    <button class="close-btn" onclick="closeModal('modal-datasheet')">ปิด</button>
-  </div>
-
-  <div id="modal-overhaul" class="modal">
-    <h3>🛠️ Overhaul History</h3>
-    <div class="info-row"><span style="color:#94a3b8">Hours:</span><b>12,450 hrs</b></div>
-    <div class="info-row"><span style="color:#94a3b8">Next PM:</span><b>14 Aug 2026</b></div>
-    <button class="close-btn" onclick="closeModal('modal-overhaul')">ปิด</button>
-  </div>
-
-  <!-- AR Scene -->
   <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
     
-    <!-- Lighting Setup -->
-    <a-entity light="type: ambient; intensity: 0.8;"></a-entity>
+    <a-entity light="type: ambient; intensity: 0.9;"></a-entity>
     <a-entity light="type: directional; intensity: 1.2; position: 1 4 2"></a-entity>
 
     <a-marker preset="hiro" id="hiro-marker">
       
-      <!-- Built-in 3D Motor Structure (ไม่ต้องโหลดไฟล์จากภายนอก) -->
-      <a-entity id="built-in-motor" position="0 0.2 0" scale="0.8 0.8 0.8">
-        <!-- Base Feet -->
-        <a-box position="0 0 0" width="0.8" height="0.08" depth="0.8" color="#334155" metalness="0.5"></a-box>
-        <!-- Stator Body -->
-        <a-cylinder position="0 0.35 0" radius="0.32" height="0.65" color="#1e40af" rotation="0 0 90" metalness="0.3"></a-cylinder>
-        
-        <!-- Cooling Fins (ครีบระบายความร้อน) -->
-        <a-torus position="-0.15 0.35 0" radius="0.33" radius-tubular="0.01" color="#1d4ed8" rotation="0 90 0"></a-torus>
-        <a-torus position="-0.05 0.35 0" radius="0.33" radius-tubular="0.01" color="#1d4ed8" rotation="0 90 0"></a-torus>
-        <a-torus position="0.05 0.35 0" radius="0.33" radius-tubular="0.01" color="#1d4ed8" rotation="0 90 0"></a-torus>
-        <a-torus position="0.15 0.35 0" radius="0.33" radius-tubular="0.01" color="#1d4ed8" rotation="0 90 0"></a-torus>
-
-        <!-- Terminal Box (กล่องไฟด้านบน) -->
-        <a-box position="0 0.7 0" width="0.25" height="0.15" depth="0.25" color="#0284c7" metalness="0.4"></a-box>
-
-        <!-- Motor Shaft (เพลาโลหะ) -->
-        <a-cylinder position="0.45 0.35 0" radius="0.07" height="0.3" color="#cbd5e1" rotation="0 0 90" metalness="0.8" roughness="0.2"></a-cylinder>
-        <a-cylinder position="0.33 0.35 0" radius="0.2" height="0.04" color="#64748b" rotation="0 0 90"></a-cylinder>
-        <a-cylinder position="-0.33 0.35 0" radius="0.32" height="0.04" color="#0f172a" rotation="0 0 90"></a-cylinder>
+      <a-plane position="0 0 -0.8" rotation="-90 0 0" width="1.6" height="2.2" color="#15803d"></a-plane>
+      <a-plane position="0 0.001 -0.8" rotation="-90 0 0" width="1.5" height="2.1" color="#16a34a"></a-plane>
+      <a-ring position="0 0.002 0.1" rotation="-90 0 0" radius-inner="0.29" radius-outer="0.3" color="#ffffff"></a-ring>
+      
+      <a-entity id="goal-post" position="0 0 -1.6">
+        <a-cylinder position="-0.65 0.45 0" radius="0.02" height="0.9" color="#ffffff"></a-cylinder>
+        <a-cylinder position="0.65 0.45 0" radius="0.02" height="0.9" color="#ffffff"></a-cylinder>
+        <a-cylinder position="0 0.9 0" radius="0.02" height="1.32" color="#ffffff" rotation="0 0 90"></a-cylinder>
+        <a-plane position="0 0.45 -0.2" width="1.3" height="0.9" color="#e2e8f0" opacity="0.4" material="wireframe: true"></a-plane>
       </a-entity>
 
-      <!-- 3D Live Telemetry Floating Text -->
-      <a-text id="ar-live-text" value="TEMP: 42.5 C" position="0 1.2 0" align="center" color="#38bdf8" scale="0.8 0.8 0.8"></a-text>
-
-    </a-marker>
-
-    <a-entity camera></a-entity>
-  </a-scene>
-
-  <script>
-    function openModal(id) {
-      document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-      document.getElementById(id).style.display = 'block';
-    }
-    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-
-    function togglePMPanel() {
-      const panel = document.getElementById('pm-panel');
-      panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
-    }
-
-    function saveInspection() {
-      alert("✅ บันทึกผลการตรวจเช็คเรียบร้อยแล้ว!");
-      togglePMPanel();
-    }
-
-    setInterval(() => {
-      const t = (41.0 + Math.random() * 6.0).toFixed(1);
-      const v = (0.9 + Math.random() * 0.8).toFixed(2);
-      document.getElementById('live-temp').innerText = `${t} °C`;
-      document.getElementById('live-vib').innerText = `${v} mm/s`;
-      document.querySelector('#ar-live-text').setAttribute('value', `TEMP: ${t} C | VIB: ${v} mm/s`);
-    }, 2000);
-  </script>
-</body>
-</html>
+      <a-entity id="goalkeeper" position="0 0 -1.55">
+        <a-box position="0 0.45 0" width="0.22" height="0.35" depth="0.12" color="#ef4444"></a-box>
+        <a-sphere position="0 0.7 0" radius="0.09" color="#fca5a5"></a-sphere>
+        <a-sphere id="glove-left" position="-0.16 0.45 0.05" radius="0.05" color="#f59e0b"></a-sphere>
+        <a-sphere id="glove-right" position="0.16 0.45 0.05" radius="0.05" color="#f59e0b"></a-sphere>
+        <a-cylinder position="-0.06 0.15 0" radius="0.04" height="0.3" color="#1e293b"></a-cylinder>
+        <a-cylinder position="0.06 0.15 0" radius="0.04" height="0.3" color="#1e2
