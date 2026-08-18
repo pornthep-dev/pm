@@ -2,120 +2,279 @@
 <html lang="th">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>AR Penalty Kick Simulator Pro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AR Motor Digital Twin + Inspection Checklist</title>
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
   
   <style>
-    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-
-    /* 1. Scoreboard HUD */
-    .score-hud {
+    /* 1. Live IoT Dashboard (ซ้ายบน) */
+    .iot-dashboard {
       position: fixed;
-      top: 15px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(15, 23, 42, 0.85);
-      border: 1px solid rgba(56, 189, 248, 0.5);
-      border-radius: 20px;
-      padding: 8px 20px;
+      top: 10px;
+      left: 10px;
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid #38bdf8;
+      border-radius: 10px;
+      padding: 10px 14px;
       color: #fff;
+      font-family: sans-serif;
       z-index: 999;
-      display: flex;
-      gap: 15px;
+      font-size: 12px;
+    }
+
+    /* 2. แผงตรวจเช็ค Inspection Checklist (ขวาบน) */
+    .inspection-panel {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid #38bdf8;
+      border-radius: 12px;
+      padding: 12px;
+      color: #fff;
+      font-family: sans-serif;
+      z-index: 999;
+      width: 210px;
       backdrop-filter: blur(8px);
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
     }
-    .score-box { text-align: center; }
-    .score-title { font-size: 10px; color: #94a3b8; font-weight: bold; }
-    .score-val { font-size: 18px; font-weight: 800; color: #38bdf8; }
+    .inspection-title {
+      font-size: 12px;
+      font-weight: bold;
+      color: #38bdf8;
+      border-bottom: 1px solid #334155;
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+    }
+    .check-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+    .check-options {
+      display: flex;
+      gap: 6px;
+    }
+    .check-label {
+      cursor: pointer;
+      font-size: 11px;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .check-label input { cursor: pointer; }
+    .label-pass { color: #4ade80; }
+    .label-fail { color: #f87171; }
+    
+    .save-btn {
+      background: #22c55e;
+      color: #fff;
+      border: none;
+      padding: 8px;
+      border-radius: 6px;
+      width: 100%;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 6px;
+      font-size: 12px;
+    }
+    .save-btn:active { transform: scale(0.97); }
 
-    /* 2. Notification Banner (Goal / Saved) */
-    .status-banner {
+    /* 3. ปุ่มกด 2D Screen Overlay (ล่าง) */
+    .ar-controls-panel {
       position: fixed;
-      top: 75px;
+      bottom: 15px;
       left: 50%;
       transform: translateX(-50%);
-      padding: 8px 20px;
-      border-radius: 30px;
-      font-weight: 800;
-      font-size: 16px;
-      color: white;
-      z-index: 1000;
-      display: none;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-    }
-    .bg-goal { background: #22c55e; }
-    .bg-saved { background: #ef4444; }
-
-    /* 3. Kick Button */
-    .kick-btn-container {
-      position: fixed;
-      bottom: 25px;
-      left: 50%;
-      transform: translateX(-50%);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      width: 90%;
+      max-width: 380px;
       z-index: 999;
     }
-    .kick-btn {
-      background: linear-gradient(135deg, #ef4444, #dc2626);
-      color: white;
-      border: 3px solid #ffffff;
-      padding: 14px 45px;
-      border-radius: 40px;
-      font-size: 20px;
-      font-weight: 900;
-      letter-spacing: 1px;
+    .ar-btn {
+      background: #1e293b;
+      color: #ffffff;
+      border: 1px solid #38bdf8;
+      padding: 10px 6px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 12px;
       cursor: pointer;
-      box-shadow: 0 10px 25px rgba(239, 68, 68, 0.5);
-      transition: all 0.1s ease;
+      text-align: center;
     }
-    .kick-btn:active { transform: scale(0.92); }
-    .kick-btn:disabled { background: #64748b; border-color: #94a3b8; box-shadow: none; }
+    .btn-orange { border-color: #f59e0b; color: #fbbf24; }
+    .btn-cyan { border-color: #06b6d4; color: #22d3ee; }
+    .btn-blue { border-color: #3b82f6; color: #60a5fa; }
+    .btn-green { border-color: #22c55e; color: #4ade80; }
+
+    /* 4. Pop-up Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(15, 23, 42, 0.95);
+      color: #f8fafc;
+      padding: 20px;
+      border-radius: 12px;
+      z-index: 1000;
+      width: 85%;
+      max-width: 320px;
+      font-family: sans-serif;
+      border: 1px solid #38bdf8;
+    }
+    .modal h3 { margin-top: 0; color: #38bdf8; font-size: 16px; border-bottom: 1px solid #334155; padding-bottom: 6px; }
+    .info-row { display: flex; justify-content: space-between; margin: 6px 0; font-size: 13px; }
+    .info-label { color: #94a3b8; }
+    .close-btn { background: #ef4444; border: none; color: white; padding: 8px; margin-top: 12px; border-radius: 6px; width: 100%; font-weight: bold; }
   </style>
 </head>
 <body style="margin: 0; overflow: hidden;">
 
-  <div class="score-hud">
-    <div class="score-box">
-      <div class="score-title">GOALS</div>
-      <div class="score-val" id="goals-count" style="color: #4ade80;">0</div>
-    </div>
-    <div style="border-left: 1px solid #334155;"></div>
-    <div class="score-box">
-      <div class="score-title">SAVED</div>
-      <div class="score-val" id="saved-count" style="color: #f87171;">0</div>
-    </div>
+  <!-- 1. Live IoT Dashboard -->
+  <div class="iot-dashboard">
+    <div style="color:#38bdf8; font-weight:bold;">📡 LIVE TELEMETRY</div>
+    <div>Temp: <b id="live-temp" style="color:#38bdf8">42.5 °C</b></div>
+    <div>Vib: <b id="live-vib" style="color:#38bdf8">1.20 mm/s</b></div>
   </div>
 
-  <div class="status-banner" id="status-banner">GOAL!</div>
-
-  <div class="kick-btn-container">
-    <button class="kick-btn" id="kick-btn" onclick="startPenaltyKick()">KICK!</button>
-  </div>
-
-  <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
+  <!-- 2. Inspection Checklist (ส่วนบันทึกการตรวจเช็ค) -->
+  <div class="inspection-panel">
+    <div class="inspection-title">📋 บันทึกการตรวจเช็ค (PM Check)</div>
     
-    <a-entity light="type: ambient; intensity: 0.9;"></a-entity>
-    <a-entity light="type: directional; intensity: 1.2; position: 1 4 2"></a-entity>
+    <!-- รายการที่ 1: สภาพภายนอก -->
+    <div class="check-item">
+      <span>1. สภาพภายนอก</span>
+      <div class="check-options">
+        <label class="check-label label-pass"><input type="radio" name="check_visual" value="ปกติ" checked>ปกติ</label>
+        <label class="check-label label-fail"><input type="radio" name="check_visual" value="ผิดปกติ">ผิดปกติ</label>
+      </div>
+    </div>
 
+    <!-- รายการที่ 2: เสียงการทำงาน -->
+    <div class="check-item">
+      <span>2. เสียงการทำงาน</span>
+      <div class="check-options">
+        <label class="check-label label-pass"><input type="radio" name="check_sound" value="ปกติ" checked>ปกติ</label>
+        <label class="check-label label-fail"><input type="radio" name="check_sound" value="ผิดปกติ">ผิดปกติ</label>
+      </div>
+    </div>
+
+    <!-- รายการที่ 3: ระดับความร้อน -->
+    <div class="check-item">
+      <span>3. ระดับความร้อน</span>
+      <div class="check-options">
+        <label class="check-label label-pass"><input type="radio" name="check_temp" value="ปกติ" checked>ปกติ</label>
+        <label class="check-label label-fail"><input type="radio" name="check_temp" value="ผิดปกติ">ผิดปกติ</label>
+      </div>
+    </div>
+
+    <!-- รายการที่ 4: การสั่นสะเทือน -->
+    <div class="check-item">
+      <span>4. การสั่นสะเทือน</span>
+      <div class="check-options">
+        <label class="check-label label-pass"><input type="radio" name="check_vib" value="ปกติ" checked>ปกติ</label>
+        <label class="check-label label-fail"><input type="radio" name="check_vib" value="ผิดปกติ">ผิดปกติ</label>
+      </div>
+    </div>
+
+    <button class="save-btn" onclick="saveInspection()">💾 บันทึกผลตรวจ</button>
+  </div>
+
+  <!-- 3. ปุ่มกด Info Overlays -->
+  <div class="ar-controls-panel">
+    <button class="ar-btn btn-orange" onclick="openModal('modal-nameplate')">🏷️ NAMEPLATE</button>
+    <button class="ar-btn btn-cyan" onclick="openModal('modal-last-date')">📅 LAST DATE</button>
+    <button class="ar-btn btn-blue" onclick="openModal('modal-datasheet')">⚙️ DATASHEET</button>
+    <button class="ar-btn btn-green" onclick="openModal('modal-overhaul')">🛠️ HISTORY</button>
+  </div>
+
+  <!-- Modals -->
+  <div id="modal-nameplate" class="modal">
+    <h3>🏷️ Motor Nameplate Spec</h3>
+    <div class="info-row"><span class="info-label">Brand:</span><b>SIEMENS / ABB</b></div>
+    <div class="info-row"><span class="info-label">Serial No.:</span><b>SN-2026-8849A</b></div>
+    <div class="info-row"><span class="info-label">Current (A):</span><b>40.5A (Δ 400V)</b></div>
+    <button class="close-btn" onclick="closeModal('modal-nameplate')">ปิด</button>
+  </div>
+
+  <div id="modal-last-date" class="modal">
+    <h3>📅 Last Overhaul Record</h3>
+    <div class="info-row"><span class="info-label">Date:</span><b style="color:#f59e0b">14 FEB 2026</b></div>
+    <div class="info-row"><span class="info-label">Service:</span><b>Bearing & Alignment</b></div>
+    <button class="close-btn" onclick="closeModal('modal-last-date')">ปิด</button>
+  </div>
+
+  <div id="modal-datasheet" class="modal">
+    <h3>⚙️ Motor Datasheet</h3>
+    <div class="info-row"><span class="info-label">Model:</span><b>IE3 High Efficiency</b></div>
+    <div class="info-row"><span class="info-label">Power:</span><b>22 kW / 30 HP</b></div>
+    <button class="close-btn" onclick="closeModal('modal-datasheet')">ปิด</button>
+  </div>
+
+  <div id="modal-overhaul" class="modal">
+    <h3>🛠️ Overhaul History</h3>
+    <div class="info-row"><span class="info-label">Hours:</span><b>12,450 hrs</b></div>
+    <div class="info-row"><span class="info-label">Next PM:</span><b>14 Aug 2026</b></div>
+    <button class="close-btn" onclick="closeModal('modal-overhaul')">ปิด</button>
+  </div>
+
+  <!-- AR Scene -->
+  <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;">
     <a-marker preset="hiro" id="hiro-marker">
-      
-      <a-plane position="0 0 -0.8" rotation="-90 0 0" width="1.6" height="2.2" color="#15803d"></a-plane>
-      <a-plane position="0 0.001 -0.8" rotation="-90 0 0" width="1.5" height="2.1" color="#16a34a"></a-plane>
-      <a-ring position="0 0.002 0.1" rotation="-90 0 0" radius-inner="0.29" radius-outer="0.3" color="#ffffff"></a-ring>
-      
-      <a-entity id="goal-post" position="0 0 -1.6">
-        <a-cylinder position="-0.65 0.45 0" radius="0.02" height="0.9" color="#ffffff"></a-cylinder>
-        <a-cylinder position="0.65 0.45 0" radius="0.02" height="0.9" color="#ffffff"></a-cylinder>
-        <a-cylinder position="0 0.9 0" radius="0.02" height="1.32" color="#ffffff" rotation="0 0 90"></a-cylinder>
-        <a-plane position="0 0.45 -0.2" width="1.3" height="0.9" color="#e2e8f0" opacity="0.4" material="wireframe: true"></a-plane>
+      <a-entity position="0 0.2 0" scale="0.7 0.7 0.7">
+        <a-box position="0 0 0" width="0.8" height="0.1" depth="0.8" color="#334155"></a-box>
+        <a-cylinder id="motor-body" position="0 0.35 0" radius="0.35" height="0.6" color="#1e40af" rotation="0 0 90"></a-cylinder>
+        <a-cylinder position="0.45 0.35 0" radius="0.08" height="0.3" color="#94a3b8" rotation="0 0 90"></a-cylinder>
       </a-entity>
+      <a-text id="ar-live-text" value="TEMP: 42.5 C" position="0 1.2 0" align="center" color="#38bdf8" scale="0.8 0.8 0.8"></a-text>
+    </a-marker>
+    <a-entity camera></a-entity>
+  </a-scene>
 
-      <a-entity id="goalkeeper" position="0 0 -1.55">
-        <a-box position="0 0.45 0" width="0.22" height="0.35" depth="0.12" color="#ef4444"></a-box>
-        <a-sphere position="0 0.7 0" radius="0.09" color="#fca5a5"></a-sphere>
-        <a-sphere id="glove-left" position="-0.16 0.45 0.05" radius="0.05" color="#f59e0b"></a-sphere>
-        <a-sphere id="glove-right" position="0.16 0.45 0.05" radius="0.05" color="#f59e0b"></a-sphere>
-        <a-cylinder position="-0.06 0.15 0" radius="0.04" height="0.3" color="#1e293b"></a-cylinder>
-        <a-cylinder position="0.06 0.15 0" radius="0.04" height="0.3" color="#1e2
+  <script>
+    function openModal(id) {
+      document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+      document.getElementById(id).style.display = 'block';
+    }
+    function closeModal(id) {
+      document.getElementById(id).style.display = 'none';
+    }
+
+    // ฟังก์ชันบันทึกการตรวจเช็ค
+    function saveInspection() {
+      const visual = document.querySelector('input[name="check_visual"]:checked').value;
+      const sound = document.querySelector('input[name="check_sound"]:checked').value;
+      const temp = document.querySelector('input[name="check_temp"]:checked').value;
+      const vib = document.querySelector('input[name="check_vib"]:checked').value;
+
+      const record = {
+        timestamp: new Date().toLocaleString('th-TH'),
+        visual: visual,
+        sound: sound,
+        temperature: temp,
+        vibration: vib
+      };
+
+      console.log("บันทึกผลการตรวจเช็คสำเร็จ:", record);
+      alert(`✅ บันทึกการตรวจเช็คสำเร็จ!\n\n1. สภาพภายนอก: ${visual}\n2. เสียงการทำงาน: ${sound}\n3. ระดับความร้อน: ${temp}\n4. การสั่นสะเทือน: ${vib}\n\nบันทึกเวลา: ${record.timestamp}`);
+      
+      // สามารถส่งต่อค่าไปยัง Server ด้วย fetch() ได้ตรงนี้
+    }
+
+    setInterval(() => {
+      const t = (41.0 + Math.random() * 6.0).toFixed(1);
+      const v = (0.9 + Math.random() * 0.8).toFixed(2);
+      document.getElementById('live-temp').innerText = `${t} °C`;
+      document.getElementById('live-vib').innerText = `${v} mm/s`;
+      document.querySelector('#ar-live-text').setAttribute('value', `TEMP: ${t} C | VIB: ${v} mm/s`);
+    }, 2000);
+  </script>
+</body>
+</html>
