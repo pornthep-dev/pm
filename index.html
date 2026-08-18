@@ -2,65 +2,85 @@
 <html lang="th">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>AR Motor Digital Twin + Inspection Checklist</title>
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
   
   <style>
+    * { box-sizing: border-box; font-family: sans-serif; }
+
     /* 1. Live IoT Dashboard (ซ้ายบน) */
     .iot-dashboard {
       position: fixed;
       top: 10px;
       left: 10px;
-      background: rgba(15, 23, 42, 0.88);
+      background: rgba(15, 23, 42, 0.85);
       border: 1px solid #38bdf8;
       border-radius: 10px;
-      padding: 10px 14px;
+      padding: 8px 12px;
       color: #fff;
-      font-family: sans-serif;
       z-index: 999;
-      font-size: 12px;
+      font-size: 11px;
+      backdrop-filter: blur(8px);
     }
 
-    /* 2. แผงตรวจเช็ค Inspection Checklist (ขวาบน) */
-    .inspection-panel {
+    /* 2. ปุ่มเปิด/ปิด เมนูตรวจเช็ค (ขวาบน) */
+    .pm-toggle-btn {
       position: fixed;
       top: 10px;
       right: 10px;
-      background: rgba(15, 23, 42, 0.92);
+      background: #0284c7;
+      color: #fff;
+      border: 1px solid #38bdf8;
+      border-radius: 20px;
+      padding: 8px 14px;
+      font-size: 11px;
+      font-weight: bold;
+      cursor: pointer;
+      z-index: 999;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    }
+    .pm-toggle-btn:active { transform: scale(0.95); }
+
+    /* 3. แผงตรวจเช็ค Inspection Checklist (ซ่อนไว้ก่อน พับเก็บได้) */
+    .inspection-panel {
+      display: none;
+      position: fixed;
+      top: 48px;
+      right: 10px;
+      background: rgba(15, 23, 42, 0.95);
       border: 1px solid #38bdf8;
       border-radius: 12px;
-      padding: 12px;
+      padding: 10px 12px;
       color: #fff;
-      font-family: sans-serif;
-      z-index: 999;
-      width: 210px;
-      backdrop-filter: blur(8px);
-      box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+      z-index: 998;
+      width: 200px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
     }
     .inspection-title {
-      font-size: 12px;
+      font-size: 11px;
       font-weight: bold;
       color: #38bdf8;
       border-bottom: 1px solid #334155;
-      padding-bottom: 6px;
-      margin-bottom: 8px;
+      padding-bottom: 4px;
+      margin-bottom: 6px;
     }
     .check-item {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 8px;
-      font-size: 12px;
+      margin-bottom: 6px;
+      font-size: 11px;
     }
     .check-options {
       display: flex;
-      gap: 6px;
+      gap: 4px;
     }
     .check-label {
       cursor: pointer;
-      font-size: 11px;
+      font-size: 10px;
       display: flex;
       align-items: center;
       gap: 2px;
@@ -73,17 +93,17 @@
       background: #22c55e;
       color: #fff;
       border: none;
-      padding: 8px;
+      padding: 7px;
       border-radius: 6px;
       width: 100%;
       font-weight: bold;
       cursor: pointer;
       margin-top: 6px;
-      font-size: 12px;
+      font-size: 11px;
     }
     .save-btn:active { transform: scale(0.97); }
 
-    /* 3. ปุ่มกด 2D Screen Overlay (ล่าง) */
+    /* 4. ปุ่มกด 2D Screen Overlay (ล่าง) */
     .ar-controls-panel {
       position: fixed;
       bottom: 15px;
@@ -97,22 +117,23 @@
       z-index: 999;
     }
     .ar-btn {
-      background: #1e293b;
+      background: rgba(30, 41, 59, 0.9);
       color: #ffffff;
       border: 1px solid #38bdf8;
       padding: 10px 6px;
       border-radius: 8px;
       font-weight: bold;
-      font-size: 12px;
+      font-size: 11px;
       cursor: pointer;
       text-align: center;
+      backdrop-filter: blur(6px);
     }
     .btn-orange { border-color: #f59e0b; color: #fbbf24; }
     .btn-cyan { border-color: #06b6d4; color: #22d3ee; }
     .btn-blue { border-color: #3b82f6; color: #60a5fa; }
     .btn-green { border-color: #22c55e; color: #4ade80; }
 
-    /* 4. Pop-up Modal */
+    /* 5. Pop-up Modal */
     .modal {
       display: none;
       position: fixed;
@@ -126,11 +147,11 @@
       z-index: 1000;
       width: 85%;
       max-width: 320px;
-      font-family: sans-serif;
       border: 1px solid #38bdf8;
+      backdrop-filter: blur(10px);
     }
-    .modal h3 { margin-top: 0; color: #38bdf8; font-size: 16px; border-bottom: 1px solid #334155; padding-bottom: 6px; }
-    .info-row { display: flex; justify-content: space-between; margin: 6px 0; font-size: 13px; }
+    .modal h3 { margin-top: 0; color: #38bdf8; font-size: 15px; border-bottom: 1px solid #334155; padding-bottom: 6px; }
+    .info-row { display: flex; justify-content: space-between; margin: 6px 0; font-size: 12px; }
     .info-label { color: #94a3b8; }
     .close-btn { background: #ef4444; border: none; color: white; padding: 8px; margin-top: 12px; border-radius: 6px; width: 100%; font-weight: bold; }
   </style>
@@ -144,50 +165,49 @@
     <div>Vib: <b id="live-vib" style="color:#38bdf8">1.20 mm/s</b></div>
   </div>
 
-  <!-- 2. Inspection Checklist (ส่วนบันทึกการตรวจเช็ค) -->
-  <div class="inspection-panel">
-    <div class="inspection-title">📋 บันทึกการตรวจเช็ค (PM Check)</div>
+  <!-- 2. ปุ่มกดเปิด/ปิด เมนูตรวจเช็ค (PM Check) -->
+  <button class="pm-toggle-btn" onclick="togglePMMenu()">📋 ตรวจเช็ค (PM)</button>
+
+  <!-- 3. Inspection Checklist Panel -->
+  <div class="inspection-panel" id="pm-panel">
+    <div class="inspection-title">📋 บันทึกการตรวจเช็ค</div>
     
-    <!-- รายการที่ 1: สภาพภายนอก -->
     <div class="check-item">
       <span>1. สภาพภายนอก</span>
       <div class="check-options">
         <label class="check-label label-pass"><input type="radio" name="check_visual" value="ปกติ" checked>ปกติ</label>
-        <label class="check-label label-fail"><input type="radio" name="check_visual" value="ผิดปกติ">ผิดปกติ</label>
+        <label class="check-label label-fail"><input type="radio" name="check_visual" value="ผิดปกติ">ผิด</label>
       </div>
     </div>
 
-    <!-- รายการที่ 2: เสียงการทำงาน -->
     <div class="check-item">
       <span>2. เสียงการทำงาน</span>
       <div class="check-options">
         <label class="check-label label-pass"><input type="radio" name="check_sound" value="ปกติ" checked>ปกติ</label>
-        <label class="check-label label-fail"><input type="radio" name="check_sound" value="ผิดปกติ">ผิดปกติ</label>
+        <label class="check-label label-fail"><input type="radio" name="check_sound" value="ผิดปกติ">ผิด</label>
       </div>
     </div>
 
-    <!-- รายการที่ 3: ระดับความร้อน -->
     <div class="check-item">
       <span>3. ระดับความร้อน</span>
       <div class="check-options">
         <label class="check-label label-pass"><input type="radio" name="check_temp" value="ปกติ" checked>ปกติ</label>
-        <label class="check-label label-fail"><input type="radio" name="check_temp" value="ผิดปกติ">ผิดปกติ</label>
+        <label class="check-label label-fail"><input type="radio" name="check_temp" value="ผิดปกติ">ผิด</label>
       </div>
     </div>
 
-    <!-- รายการที่ 4: การสั่นสะเทือน -->
     <div class="check-item">
       <span>4. การสั่นสะเทือน</span>
       <div class="check-options">
         <label class="check-label label-pass"><input type="radio" name="check_vib" value="ปกติ" checked>ปกติ</label>
-        <label class="check-label label-fail"><input type="radio" name="check_vib" value="ผิดปกติ">ผิดปกติ</label>
+        <label class="check-label label-fail"><input type="radio" name="check_vib" value="ผิดปกติ">ผิด</label>
       </div>
     </div>
 
     <button class="save-btn" onclick="saveInspection()">💾 บันทึกผลตรวจ</button>
   </div>
 
-  <!-- 3. ปุ่มกด Info Overlays -->
+  <!-- 4. ปุ่มกด Info Overlays -->
   <div class="ar-controls-panel">
     <button class="ar-btn btn-orange" onclick="openModal('modal-nameplate')">🏷️ NAMEPLATE</button>
     <button class="ar-btn btn-cyan" onclick="openModal('modal-last-date')">📅 LAST DATE</button>
@@ -247,7 +267,13 @@
       document.getElementById(id).style.display = 'none';
     }
 
-    // ฟังก์ชันบันทึกการตรวจเช็ค
+    // ฟังก์ชัน สลับการเปิด/ปิด เมนูตรวจเช็ค
+    function togglePMMenu() {
+      const panel = document.getElementById('pm-panel');
+      panel.style.display = (panel.style.display === 'block') ? 'none' : 'block';
+    }
+
+    // ฟังก์ชัน บันทึกการตรวจเช็ค
     function saveInspection() {
       const visual = document.querySelector('input[name="check_visual"]:checked').value;
       const sound = document.querySelector('input[name="check_sound"]:checked').value;
@@ -265,7 +291,8 @@
       console.log("บันทึกผลการตรวจเช็คสำเร็จ:", record);
       alert(`✅ บันทึกการตรวจเช็คสำเร็จ!\n\n1. สภาพภายนอก: ${visual}\n2. เสียงการทำงาน: ${sound}\n3. ระดับความร้อน: ${temp}\n4. การสั่นสะเทือน: ${vib}\n\nบันทึกเวลา: ${record.timestamp}`);
       
-      // สามารถส่งต่อค่าไปยัง Server ด้วย fetch() ได้ตรงนี้
+      // พับเก็บหน้าต่างตรวจเช็คอัตโนมัติหลังบันทึก
+      togglePMMenu();
     }
 
     setInterval(() => {
